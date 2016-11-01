@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -45,16 +46,23 @@ func Func3(name string) error {
 
 // Pattern 4: Use Error interface not concrete struct
 
-func Func4_child(name string) *ErrNeedElse {
+func Func4(name string) *ErrNeedElse {
 	if name != "cake" {
 		return &ErrNeedElse{name, "cake"}
 	}
 	return nil
 }
 
-func Func4_parent(name string) error {
-	fmt.Printf("let me give him your %s\n", name)
-	return Func4_child(name)
+type GiftToYou struct {
+	Name string `json:name`
+}
+
+func (g *GiftToYou) UnmarshalJSON(data []byte) error {
+	type alias *GiftToYou
+	var this alias = alias(g)
+	json.Unmarshal(data, &this)
+
+	return Func4(g.Name)
 }
 
 func main() {
@@ -85,7 +93,8 @@ func main() {
 	}
 
 	fmt.Println("\n== Pattern 4: Use Error interface not concrete struct ==")
-	if err := Func4_parent("cake"); err != nil {
+	v := GiftToYou{}
+	if err := json.Unmarshal([]byte(`{"name":"cake"}`), &v); err != nil {
 		switch err := err.(type) {
 		case *ErrNeedElse:
 			fmt.Printf("Hmm, he seems to need %s not %s\n", err.Need, err.Got)
